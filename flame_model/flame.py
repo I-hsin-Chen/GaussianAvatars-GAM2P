@@ -29,13 +29,13 @@ try:
 except ImportError:
     from utils.pytorch3d_load_obj import load_obj
 
-FLAME_MESH_PATH = "flame_model/assets/flame/head_template_mesh.obj"
-FLAME_LMK_PATH = "flame_model/assets/flame/landmark_embedding_with_eyes.npy"
+FLAME_MESH_PATH = "third_party/GaussianAvatars/flame_model/assets/flame/head_template_mesh.obj"
+FLAME_LMK_PATH = "third_party/GaussianAvatars/flame_model/assets/flame/landmark_embedding_with_eyes.npy"
 
 # to be downloaded from https://flame.is.tue.mpg.de/download.php
 # FLAME_MODEL_PATH = "flame_model/assets/flame/generic_model.pkl"  # FLAME 2020
-FLAME_MODEL_PATH = "flame_model/assets/flame/flame2023.pkl"  # FLAME 2023 (versions w/ jaw rotation)
-FLAME_PARTS_PATH = "flame_model/assets/flame/FLAME_masks.pkl" # FLAME Vertex Masks
+FLAME_MODEL_PATH = "third_party/GaussianAvatars/flame_model/assets/flame/flame2023.pkl"  # FLAME 2023 (versions w/ jaw rotation)
+FLAME_PARTS_PATH = "third_party/GaussianAvatars/flame_model/assets/flame/FLAME_masks.pkl" # FLAME Vertex Masks
 
 def to_tensor(array, dtype=torch.float32):
     if "torch.tensor" not in str(type(array)):

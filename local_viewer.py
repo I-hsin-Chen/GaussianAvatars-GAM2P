@@ -26,6 +26,8 @@ from gaussian_renderer import GaussianModel, FlameGaussianModel
 from gaussian_renderer import render
 from mesh_renderer import NVDiffRenderer
 
+import sys
+from exp_mapper import ExpressionMapper
 
 @dataclass
 class PipelineConfig:
@@ -33,9 +35,10 @@ class PipelineConfig:
     compute_cov3D_python: bool = False
     convert_SHs_python: bool = False
 
-
 @dataclass
 class Config(Mini3DViewerConfig):
+    model_path: Optional[Path] = None
+    """Path to the mapper model file"""
     pipeline: PipelineConfig = field(default_factory=PipelineConfig)
     """Pipeline settings for gaussian splatting rendering"""
     cam_convention: Literal["opengl", "opencv"] = "opencv"
@@ -65,6 +68,9 @@ class LocalViewer(Mini3DViewer):
     def __init__(self, cfg: Config):
         self.cfg = cfg
         
+        self.reset_blendshape_param()
+        if cfg.model_path is not None:
+            self.mapper = ExpressionMapper(cfg)
         # recording settings
         self.keyframes = []  # list of state dicts of keyframes
         self.all_frames = {}  # state dicts of all frames {key: [num_frames, ...]}
@@ -296,6 +302,9 @@ class LocalViewer(Mini3DViewer):
             'eyes': torch.zeros(1, 6),
             'translation': torch.zeros(1, 3),
         }
+    
+    def reset_blendshape_param(self):
+        self.bs_param = [0 for _ in range(51)] 
 
     def define_gui(self):
         super().define_gui()
@@ -578,6 +587,26 @@ class LocalViewer(Mini3DViewer):
                     dpg.add_slider_float(label=f"{i}", min_value=-3, max_value=3, format="%.2f", default_value=0, callback=callback_set_expr, tag=f"_slider-expr-{i}", width=250)
                     self.expr_sliders.append(f"_slider-expr-{i}")
 
+                dpg.add_separator()
+                
+                # blendshape
+                bs_to_visualize = {'LeftEyeBlink':[8], 'RightEyeBlink':[9], 'BrowDown': [0, 1], 'MouthDimple':[27, 28], 'MouthFunnel' :[31], 'MouthPucker': [37]}
+                bs_to_scale = {'LeftEyeBlink': 1.0, 'RightEyeBlink':1.0 ,'BrowDown': 1.0, 'MouthDimple': 1.0, 'MouthFunnel' : 1.1, 'MouthPucker': 1.1}
+                def callback_set_blendshape(sender, app_data):
+                    bs = sender.split('-')[2]
+                    idxs = bs_to_visualize[sender.split('-')[2]]
+                    for i in idxs:
+                        self.bs_param[i] = app_data * bs_to_scale[bs]
+                    expr, jaw = self.mapper.get_expr_and_jaw([self.bs_param])
+                    self.update_expr_and_jaw(expr, jaw)
+                    
+                self.bs_sliders = []
+                dpg.add_text(f'Blendshapes')
+                for i in bs_to_visualize.keys():
+                    dpg.add_slider_float(label=f"{i}", min_value=0, max_value=1, format="%.2f", default_value=0, callback=callback_set_blendshape, tag=f"_slider-bs-{i}", width=200)
+                    self.bs_sliders.append(f"_slider-bs-{i}")
+                
+                # reset flame parameters
                 def callback_reset_flame(sender, app_data):
                     self.reset_flame_param()
                     if not dpg.get_value("_checkbox_enable_control"):
@@ -676,8 +705,24 @@ class LocalViewer(Mini3DViewer):
                         self.apply_state_dict(state_dict)
 
             dpg.render_dearpygui_frame()
+    
+    def update_expr_and_jaw(self, expr, jaw): 
+        self.flame_param['expr'] = torch.tensor(expr, dtype=torch.float32)
+        self.flame_param['jaw'] = torch.tensor(jaw, dtype=torch.float32)
+        self.gaussians.update_mesh_by_param_dict(self.flame_param)
+        self.need_update = True
 
-
+    def update_head_pose(self, head_pose):
+        self.flame_param['neck'] = torch.tensor(head_pose, dtype=torch.float32)
+        self.gaussians.update_mesh_by_param_dict(self.flame_param)
+        self.need_update = True
+    
+    def update_eye_pose(self, eyes_pose):
+        self.flame_param['eyes'] = torch.tensor(eyes_pose, dtype=torch.float32)
+        self.gaussians.update_mesh_by_param_dict(self.flame_param)
+        self.need_update = True
+    
+        
 if __name__ == "__main__":
     cfg = tyro.cli(Config)
     gui = LocalViewer(cfg)
