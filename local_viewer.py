@@ -591,7 +591,7 @@ class LocalViewer(Mini3DViewer):
                 
                 # blendshape
                 bs_to_visualize = {'LeftEyeBlink':[8], 'RightEyeBlink':[9], 'BrowDown': [0, 1], 'MouthDimple':[27, 28], 'MouthFunnel' :[31], 'MouthPucker': [37]}
-                bs_to_scale = {'LeftEyeBlink': 1.0, 'RightEyeBlink':1.0 ,'BrowDown': 1.0, 'MouthDimple': 1.0, 'MouthFunnel' : 1.1, 'MouthPucker': 1.1}
+                bs_to_scale = {'LeftEyeBlink': 1.5, 'RightEyeBlink':1.5 ,'BrowDown': 1.0, 'MouthDimple': 1.0, 'MouthFunnel' : 1.1, 'MouthPucker': 1.1}
                 def callback_set_blendshape(sender, app_data):
                     bs = sender.split('-')[2]
                     idxs = bs_to_visualize[sender.split('-')[2]]
